@@ -1,0 +1,151 @@
+/*
+    FUNCTION NAME: timeNow
+    DESCRIPTION: Returns the fractional portion of the current date&time, 
+    yeilding a number between 0 and 24.
+    ARGS: None
+
+    EXAMPLE: 
+        =timeNow()
+*/
+
+timeNow = (NOW()-TODAY())*24;
+
+
+/*
+    FUNCTION NAME: ifBlank
+    DESCRIPTION: Checks if a value is blank and returns value_if_blank if it is
+    ARGS:
+        value: The value to check if it's blank
+        value_if_blank: The value to return if a blank value is found
+
+    EXAMPLE: 
+        =ifBlank(value,"blankVal")
+*/
+
+ifBlank =LAMBDA(value,value_if_blank,IF(ISBLANK(value), value_if_blank, value));
+
+
+
+/*
+    FUNCTION NAME: item3rdLookup
+    DESCRIPTION: Looks up the 3rd item number from any reasonable input like item number, drawing number, or 3rd item number.
+    ARGS: 
+		inputPartNumber
+
+    EXAMPLE: 
+        =item3rdLookup(itemNumber)
+*/
+
+item3rdLookup =LAMBDA(in,LET(
+    input, TRIM(in),
+    itm, F4101_Item[Item],
+    itm3rd, F4101_Item[3rd Item],
+    dwg, F4101_Item[Drawing],
+    IF(
+        input = "",
+        "",
+        XLOOKUP(
+            input,
+            dwg,
+            itm3rd,
+            XLOOKUP(
+                IFERROR(NUMBERVALUE(input), 0),
+                itm,
+                itm3rd,
+                XLOOKUP(
+                    IF(LEFT(input, 1) = "*", RIGHT(input, LEN(input) - 1), ""),
+                    itm3rd,
+                    itm3rd,
+                    XLOOKUP(input, itm3rd, itm3rd, "no match")
+                )
+            )
+        )
+    )
+));
+
+
+/*
+    FUNCTION NAME: itemNumLookup
+    DESCRIPTION: Looks up the JDE item number from any reasonable input like item number, drawing number, or 3rd item number.
+    ARGS:
+        inputPartNumber
+
+    EXAMPLE: 
+        =itemNumLookup(inputPartNumber)
+*/
+
+itemNumLookup =LAMBDA(in,LET(
+    input, TRIM(in),
+    itm, F4101_Item[Item],
+    itm3rd, F4101_Item[3rd Item],
+    dwg, F4101_Item[Drawing],
+    IF(
+        input = "",
+        "",
+        XLOOKUP(
+            input,
+            dwg,
+            itm,
+            XLOOKUP(
+                input,
+                itm3rd,
+                itm,
+                XLOOKUP(
+                    IF(LEFT(input, 1) = "*", RIGHT(input, LEN(input) - 1), ""),
+                    itm3rd,
+                    itm,
+                    IF(AND(ISNUMBER(in), LEN(in) = 8), in, "no match")
+                )
+            )
+        )
+    )
+));
+
+
+/*
+    FUNCTION NAME: partTypeCalc
+    DESCRIPTION: Calculates the type of part based on a 3rd item number input and outputs E, M, or P
+    ARGS:
+        partNumber
+
+    EXAMPLE: 
+        =partTypeCalc("099-00040-G") 
+		result = "E"
+*/
+
+partTypeCalc =LAMBDA(input,SWITCH(
+    (
+        OR(
+            COUNTIF(input, "???-MPP-?*"),
+            COUNTIF(input, "075-???*-???*"),
+            COUNTIF(input, "095-?*-?*"),
+            COUNTIF(input, "096-?*-?*"),
+            COUNTIF(input, "098-*"),
+            COUNTIF(input, "099-00???*"),
+            COUNTIF(input, "201-???-???*"),
+            COUNTIF(input, "201-????-???*"),
+            COUNTIF(input, "202-W?X-???*"),
+            COUNTIF(input, "202-RFC-???*"),
+            COUNTIF(input, "203-TEST-???*"),
+            COUNTIF(input, "205-LCA-???*"),
+            COUNTIF(input, "205-VID-???*"),
+            COUNTIF(input, "230-CHR-???*")
+        ) * 1
+    ) +
+        (
+            OR(
+                COUNTIF(input, "071-?*-?*"),
+                COUNTIF(input, "22?-?*-?*"),
+                COUNTIF(input, "130-?*-?*"),
+                COUNTIF(input, "131-?*-?*"),
+                COUNTIF(input, "119-D*-?*"),
+                COUNTIF(input, "119-S*-?*"),
+                COUNTIF(input, "119-T*-?*"),
+                
+            ) * 2
+        ),
+    0, "P",
+    1, "E",
+    2, "M",
+    "#partTypeCalc? formula error. Check the lambda function with that name in the name manager under the fomulas tab."
+));
